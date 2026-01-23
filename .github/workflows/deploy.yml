@@ -1,0 +1,52 @@
+name: Deploy Astro to cPanel via FTP
+
+on:
+  push:
+    branches: [ main ]         # деплой при пуше в main
+  workflow_dispatch:            # ручной запуск из GitHub Actions
+  repository_dispatch:          # для вебхука из Sanity
+    types: [ sanity-content-change ]
+
+concurrency:
+  group: sysadminlog-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Astro
+        run: npm run build
+
+      - name: Verify dist
+        run: |
+          test -d dist && test "$(ls -A dist)" || (echo "dist is empty" && exit 1)
+          du -sh dist || true
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:   ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port:     ${{ secrets.FTP_PORT }}     # напр. 21 или 990 (если FTPS)
+          protocol: ftps                        # можно сменить на ftp, если хост не поддерживает FTPS
+          local-dir: dist/                      # ВАЖНО: содержимое dist
+          server-dir: ${{ secrets.FTP_PATH }}/  # ВАЖНО: docroot с завершающим слэшем
+          dangerous-clean-slate: true           # очистить целевую папку на сервере перед заливкой
+          log-level: standard

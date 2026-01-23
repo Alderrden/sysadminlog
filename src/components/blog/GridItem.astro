@@ -1,0 +1,92 @@
+---
+// src/components/blog/GridItem.astro
+import { APP_BLOG } from 'astrowind:config';
+import type { Post } from '~/types';
+
+import Image from '~/components/common/Image.astro';
+import { findImage } from '~/utils/images';
+import { getBlogPermalink } from '~/utils/permalinks';
+
+export interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+
+// 1) Пытаемся распознать внешний URL из Sanity
+const externalUrl = typeof post.image === 'string' && /^https?:\/\//.test(post.image) ? post.image : undefined;
+
+// 2) Если не внешка — пробуем штатный резолвер из темы
+const localImage = externalUrl ? undefined : await findImage(post.image);
+
+// Ссылка на пост: /blog/<slug>
+const blogBase = String(getBlogPermalink()).replace(/\/$/, '');
+const slug = String(post.permalink || '').replace(/^\/+/, '');
+const link = APP_BLOG?.post?.isEnabled && slug ? `${blogBase}/${slug}` : '';
+---
+
+<article class="mb-6 transition intersect-once intersect-quarter motion-safe:md:opacity-0 motion-safe:md:intersect:animate-fade">
+  {(externalUrl || localImage) && (
+    <div class="relative md:h-64 rounded-xl shadow-lg mb-6 bg-gray-200 dark:bg-slate-800 overflow-hidden">
+      {link ? (
+        <a href={link} class="block group">
+          {externalUrl ? (
+            <img
+              src={externalUrl}
+              alt={post.title}
+              class="w-full md:h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <Image
+              src={localImage}
+              class="w-full md:h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+              widths={[400, 900]}
+              width={400}
+              sizes="(max-width: 900px) 400px, 900px"
+              alt={post.title}
+              aspectRatio="16:9"
+              layout="cover"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+        </a>
+      ) : externalUrl ? (
+        <img
+          src={externalUrl}
+          alt={post.title}
+          class="w-full md:h-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <Image
+          src={localImage}
+          class="w-full md:h-full object-cover"
+          widths={[400, 900]}
+          width={400}
+          sizes="(max-width: 900px) 400px, 900px"
+          alt={post.title}
+          aspectRatio="16:9"
+          layout="cover"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+    </div>
+  )}
+
+  <h3 class="text-xl sm:text-2xl font-bold leading-tight mb-2 font-heading dark:text-slate-300">
+    {link ? (
+      <a class="inline-block hover:text-primary dark:hover:text-blue-700 transition-colors duration-200" href={link}>
+        {post.title}
+      </a>
+    ) : (
+      post.title
+    )}
+  </h3>
+
+  {post.excerpt && <p class="text-muted dark:text-slate-400 text-lg">{post.excerpt}</p>}
+</article>

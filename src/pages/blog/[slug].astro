@@ -1,0 +1,77 @@
+﻿---
+// src/pages/blog/[slug].astro
+import type { GetStaticPaths } from 'astro'
+import PageLayout from '~/layouts/PageLayout.astro'
+import SinglePost from '~/components/blog/SinglePost.astro'
+import ToBlogLink from '~/components/blog/ToBlogLink.astro'
+
+import { sanityClient, urlFor } from '~/lib/sanity'
+import { postBySlugQuery, postsSlugsQuery } from '~/lib/queries'
+import { mapSanityPostToTheme } from '~/lib/mapSanityToThemePost'
+import { getCanonical, getPermalink } from '~/utils/permalinks'
+import { toHTML } from '@portabletext/to-html'
+
+function esc(str: string = '') {
+  return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m] as string))
+}
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const slugs: { slug: string }[] = await sanityClient.fetch(postsSlugsQuery)
+  return slugs.map((p) => ({ params: { slug: p.slug } }))
+}
+
+const { slug } = Astro.params
+const sanityPost = await sanityClient.fetch(postBySlugQuery, { slug })
+if (!sanityPost) throw new Error('Post not found: ' + slug)
+
+// Маппинг под тип Post темы
+const post = mapSanityPostToTheme(sanityPost, urlFor)
+
+// Канонический URL (для метаданных/шеринга)
+const url = getCanonical(getPermalink(post.permalink, 'post'))
+
+// Обложка: cover или первая картинка из body как фолбэк
+const firstBodyImage = Array.isArray(sanityPost.body)
+  ? sanityPost.body.find((b: any) => b?._type === 'image')
+  : null
+
+const coverUrl =
+  sanityPost.cover
+    ? urlFor(sanityPost.cover).width(1600).height(900).fit('crop').auto('format').url()
+    : firstBodyImage
+      ? urlFor(firstBodyImage).width(1600).height(900).fit('crop').auto('format').url()
+      : undefined
+
+// Картинки внутри Portable Text
+const html = toHTML(sanityPost.body || [], {
+  components: {
+    types: {
+      image: ({ value }: any) => {
+        const src = value ? urlFor(value).width(1400).fit('max').auto('format').url() : ''
+        if (!src) return ''
+        const alt = (value?.alt || sanityPost.title || '').toString()
+        const caption = value?.caption ? `<figcaption class="mt-2 text-sm text-muted">${esc(value.caption)}</figcaption>` : ''
+        return `<figure class="my-8"><img src="${src}" alt="${esc(alt)}" class="rounded-md mx-auto" loading="lazy" decoding="async" />${caption}</figure>`
+      },
+    },
+  },
+})
+---
+
+<PageLayout
+  metadata={{
+    title: post.title,
+    description: post.excerpt,
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: 'article',
+      ...(coverUrl ? { images: [{ url: coverUrl }] } : {}),
+    },
+  }}
+>
+  <SinglePost post={{ ...post, image: coverUrl || post.image }} url={url}>
+    <Fragment set:html={html} />
+  </SinglePost>
+
+  <ToBlogLink />
+</PageLayout>

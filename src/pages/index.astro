@@ -1,0 +1,214 @@
+---
+// src/pages/index.astro
+import PageLayout from '~/layouts/PageLayout.astro'
+import { Icon } from 'astro-icon/components'
+import ListItem from '~/components/blog/ListItem.astro'
+import TerminalTicker from '~/components/common/TerminalTicker.astro'
+import { sanityClient, urlFor } from '~/lib/sanity'
+import { latestPostsQuery } from '~/lib/queries'
+import { mapSanityPostsToTheme } from '~/lib/mapSanityToThemePost'
+import { getPermalink } from '~/utils/permalinks'
+import { categoriesQuery } from '~/lib/queries'
+
+// последние посты для превью на главной
+const sanityPosts = await sanityClient.fetch(latestPostsQuery, { limit: 6 })
+const posts = mapSanityPostsToTheme(sanityPosts, urlFor)
+const featuredPosts = posts.slice(0, 6)
+const sanityCategories = await sanityClient.fetch(categoriesQuery);
+
+const toKebab = (s: string) =>
+  s
+    .replace(/^Icon/i, '')                 // IconSettingsFilled -> SettingsFilled
+    .replace(/[_\s]+/g, '-')               // пробелы/подчёркивания -> "-"
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')// camelCase -> kebab
+    .toLowerCase();
+
+const normalizeIcon = (v?: string) => {
+  if (!v) return 'tabler:tag';
+  const name = String(v).trim();
+  if (name.includes(':')) {
+    const [set, icon] = name.split(':');
+    return `${set || 'tabler'}:${toKebab(icon || '') || 'tag'}`;
+  }
+  return `tabler:${toKebab(name) || 'tag'}`;
+};
+
+const categories = sanityCategories.map((c: any) => ({
+  title: c.title,
+  slug: c.slug,
+  icon: normalizeIcon(c.icon),   // защищаемся от "IconSettingsFilled" и т.п.
+  from: c.colorFrom || '#22d3ee',
+  to:   c.colorTo   || '#6366f1',
+}));
+// статичные категории (привяжем к Sanity позже)
+//const categories = [
+//  { title: 'AI', slug: 'ai', icon: 'tabler:cpu', tint: 'from-fuchsia-500/20 to-purple-500/20' },
+//  { title: 'Automation', slug: 'automation', icon: 'tabler:robot', tint: 'from-amber-500/20 to-orange-500/20' },
+//  { title: 'System Administration', slug: 'sysadmin', icon: 'tabler:server-2', tint: 'from-sky-500/20 to-cyan-500/20' },
+//  { title: 'Development', slug: 'development', icon: 'tabler:code', tint: 'from-emerald-500/20 to-teal-500/20' },
+//  { title: 'Hardware', slug: 'hardware', icon: 'tabler:cpu-2', tint: 'from-indigo-500/20 to-blue-500/20' },
+//  { title: 'Self-improvement', slug: 'self-improvement', icon: 'tabler:growth', tint: 'from-pink-500/20 to-rose-500/20' },
+//]
+
+const metadata = {
+  title: 'sysadminlog — Blog & Portfolio',
+  description: 'Notes from a sysadmin: blog posts, fixes, how‑tos, and a living portfolio.',
+  openGraph: { type: 'website' },
+}
+---
+
+<PageLayout metadata={metadata}>
+  <section class="relative overflow-hidden">
+    <!-- Мягкое анимированное свечение -->
+    <div class="absolute inset-0 -z-10 animate-gradient"></div>
+    <!-- Интерактивный слой -->
+    <div class="interactive-hero grid-overlay absolute inset-0 -z-10"></div>
+
+    <div class="px-6 sm:px-6 py-18 md:py-24 lg:py-28 mx-auto max-w-4xl text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/10 text-blue-700 dark:text-blue-300 border border-blue-600/20 mb-6">
+        <Icon name="tabler:terminal-2" class="w-4 h-4" />
+        <span class="text-sm">sysadminlog</span>
+      </div>
+
+      <h1 class="text-5xl md:text-6xl font-extrabold leading-tight font-heading tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-500">
+        Blog & Portfolio
+      </h1>
+
+      <p class="mt-5 text-xl md:text-2xl text-muted dark:text-slate-400 max-w-3xl mx-auto">
+        A blog about news and new tools in IT and AI tools
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <a href="/blog" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary/90 hover:bg-primary text-white transition">
+          <Icon name="tabler:article" class="w-5 h-5" /> Read the Blog
+        </a>
+        <a href="/me" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-900 dark:text-slate-200 transition">
+          <Icon name="tabler:user" class="w-5 h-5" /> About Me
+        </a>
+        <a href="/donate" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500/90 hover:bg-amber-500 text-white transition">
+          <Icon name="tabler:heart" class="w-5 h-5" /> Donate
+        </a>
+      </div>
+
+      <!-- Маленькие соц‑кнопки -->
+      <div class="mt-4 flex items-center justify-center gap-2">
+        <a href="https://linkedin.com/in/your-handle" target="_blank" rel="noopener noreferrer" class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition" aria-label="LinkedIn">
+          <Icon name="tabler:brand-linkedin" class="w-5 h-5 text-[#0A66C2]" />
+        </a>
+        <a href="https://github.com/yourname" target="_blank" rel="noopener noreferrer" class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition" aria-label="GitHub">
+          <Icon name="tabler:brand-github" class="w-5 h-5" />
+        </a>
+        <a href="https://t.me/yourhandle" target="_blank" rel="noopener noreferrer" class="p-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition" aria-label="Telegram">
+          <Icon name="tabler:brand-telegram" class="w-5 h-5 text-sky-500" />
+        </a>
+      </div>
+      <TerminalTicker />
+    </div>
+  </section>
+
+  <!-- Категории-плитки -->
+  <section class="px-6 sm:px-6 py-10 mx-auto max-w-5xl">
+    <h2 class="text-2xl md:text-3xl font-bold font-heading mb-5">Categories</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {categories.map((c) => (
+        <a href={getPermalink(c.slug, 'category')}
+           class="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800 p-5 transition bg-white/60 dark:bg-slate-900/60 backdrop-blur hover:shadow-xl hover:-translate-y-0.5">
+          <div class="cat-tint pointer-events-none absolute -inset-20 opacity-0 group-hover:opacity-100 transition duration-500"
+               style={`--cfrom:${c.from}; --cto:${c.to};`} />
+          <div class="relative flex items-start gap-3">
+            <div class="rounded-md p-2 bg-primary/10 text-primary group-hover:scale-110 transition">
+              <Icon name={c.icon} class="w-5 h-5" />
+            </div>
+            <div>
+              <div class="font-semibold">{c.title}</div>
+              <div class="text-sm text-muted dark:text-slate-400">Explore posts</div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+
+
+  <!-- Последние посты: сетка 2 в ряд -->
+  {featuredPosts?.length > 0 && (
+    <section class="px-6 sm:px-6 py-12 sm:py-16 lg:py-20 mx-auto max-w-5xl">
+      <div class="flex items-baseline justify-between mb-6">
+        <h2 class="text-2xl md:text-3xl font-bold font-heading">Latest posts</h2>
+        <a href="/blog" class="text-primary dark:text-blue-400 hover:underline inline-flex items-center gap-1">
+          View all <Icon name="tabler:arrow-right" class="w-4 h-4" />
+        </a>
+      </div>
+      <div class="grid gap-8 md:grid-cols-2">
+        {featuredPosts.map((p) => <ListItem post={p} />)}
+      </div>
+    </section>
+  )}
+
+  <style>
+    :root { --mx: 50vw; --my: 35vh; }  
+
+    /* фон */
+    .animate-gradient {
+      background: conic-gradient(from 180deg at 50% 50%, #0ea5e9, #6366f1, #22d3ee, #0ea5e9);
+      animation: spin 12s linear infinite;
+      filter: blur(60px); opacity: 0.14;
+    }
+    .cat-tint {
+      background: radial-gradient(800px 800px at 20% -10%, color-mix(in srgb, var(--cfrom) 60%, transparent), transparent 60%),
+                  linear-gradient(135deg, var(--cfrom), var(--cto));
+      filter: blur(2px);
+    }
+    @keyframes spin { to { transform: rotate(1turn); } }  
+
+    .interactive-hero::before {
+      content: ""; position: absolute; inset: -10%;
+      background:
+        radial-gradient(600px 600px at var(--mx) var(--my), rgba(59,130,246,0.18), transparent 60%),
+        radial-gradient(800px 800px at 20% -10%, rgba(14,165,233,0.12), transparent 60%);
+      filter: blur(20px); pointer-events: none;
+    }
+    .grid-overlay::after {
+      content: ""; position: absolute; inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(15,23,42,0) 0%, rgba(15,23,42,0.04) 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(100,116,139,0.08) 25px),
+        repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(100,116,139,0.08) 25px);
+      mix-blend-mode: overlay; pointer-events: none;
+    }  
+
+    /* эффект вспышки для мотивации */
+    @keyframes flash { 0%{opacity:0} 50%{opacity:0.6} 100%{opacity:0} }
+    .flash { animation: flash 500ms ease; }  
+
+    /* красивые карточки */
+    .fancy-card { position: relative; border-radius: 16px; padding: 1px;
+      background: linear-gradient(135deg, rgba(59,130,246,.35), rgba(14,165,233,.25), rgba(99,102,241,.35));
+    }
+    .fancy-card::before { content:''; position:absolute; inset:-2px; border-radius:18px;
+      background: radial-gradient(800px 800px at var(--mx) var(--my), rgba(59,130,246,.18), transparent 60%);
+      opacity:0; transition: opacity .3s;
+    }
+    .fancy-card:hover::before { opacity:.7; }
+    .fancy-card .inner { position: relative; border-radius: 16px; padding: 20px;
+      background: rgba(255,255,255,.60); border: 1px solid rgba(226,232,240,.6); backdrop-filter: blur(8px);
+    }
+    .dark .fancy-card .inner { background: rgba(15,23,42,.60); border-color: rgba(30,41,59,.8); }  
+
+    /* чипы */
+    .chip { display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .75rem;
+      border-radius:.6rem; border:1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.06); color:inherit; transition: all .2s;
+    }
+    .chip:hover { background: rgba(148,163,184,.16); }
+    .chip.primary { background: rgb(59,130,246); color:#fff; border-color: transparent; }
+    .dark .chip.primary { background: rgb(37,99,235); }
+    .chip.dark { background:#0f172a; color:#fff; border-color: transparent; }
+    .dark .chip.dark { background:#1f2937; }
+    .chip.ghost { background: transparent; border-color: rgba(148,163,184,.35); }
+    .chip.pill { border-radius: 9999px; }
+    .chip.selected { background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.35); color: rgb(59,130,246); }
+  </style>
+
+</PageLayout>

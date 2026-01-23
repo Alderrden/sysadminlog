@@ -1,0 +1,120 @@
+---
+/* Ничего передавать не нужно — компонент самодостаточный */
+---
+<section class="py-6">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="terminal-wrap">
+      <div class="terminal-line" aria-live="polite" aria-atomic="true">
+        <span class="prompt">$</span>
+        <span id="tt-text"></span>
+        <span id="tt-caret" class="caret"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .terminal-wrap {
+    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,.18);
+    background: linear-gradient(180deg, rgba(2,6,23,.6), rgba(2,6,23,.35));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .dark .terminal-wrap {
+    border-color: rgba(30,41,59,.55);
+    background: linear-gradient(180deg, rgba(2,6,23,.75), rgba(2,6,23,.45));
+  }
+  .terminal-line {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.95rem;
+    color: #e5e7eb;
+    padding: 10px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .prompt {
+    color: #34d399; /* emerald */
+    margin-right: 8px;
+    user-select: none;
+  }
+  .caret {
+    display: inline-block;
+    width: 8px;
+    height: 1.1em;
+    margin-left: 2px;
+    background: currentColor;
+    opacity: .75;
+    vertical-align: -2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+
+<script is:inline>
+  (function () {
+    const phrases = [
+      "Automate the boring stuff. Focus on the impact.",
+      "Small, steady improvements beat massive rewrites.",
+      "If it’s not monitored, it doesn’t exist.",
+      "Write once, run anywhere. Document always.",
+      "Your future self will thank you for good logs.",
+      "Ship small. Learn fast. Repeat.",
+      "Backups are only real after a restore test.",
+      "Simplicity scales better than cleverness."
+    ];
+
+    const textEl = document.getElementById('tt-text');
+    const caret = document.getElementById('tt-caret');
+    if (!textEl) return;
+
+    let i = 0;
+    const rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function type(text, cb) {
+      textEl.textContent = '';
+      let p = 0;
+      const speed = 35;
+      const t = setInterval(() => {
+        textEl.textContent += text.charAt(p++);
+        if (p >= text.length) {
+          clearInterval(t);
+          cb && cb();
+        }
+      }, speed);
+    }
+    function erase(cb) {
+      const current = textEl.textContent || '';
+      let p = current.length;
+      const speed = 14;
+      const t = setInterval(() => {
+        textEl.textContent = current.slice(0, --p);
+        if (p <= 0) {
+          clearInterval(t);
+          cb && cb();
+        }
+      }, speed);
+    }
+    function cycle() {
+      const phrase = phrases[i % phrases.length];
+      type(phrase, () => setTimeout(() => erase(() => {
+        i++;
+        setTimeout(cycle, 220);
+      }), 1800));
+    }
+
+    if (rm) {
+      textEl.textContent = phrases[0];
+      caret && (caret.style.animation = 'none');
+    } else {
+      cycle();
+    }
+
+    // клик по строке — мгновенно следующая фраза
+    textEl.parentElement?.addEventListener('click', () => {
+      textEl.textContent = '';
+      i++;
+      cycle();
+    }, { passive: true });
+  })();
+</script>

@@ -1,0 +1,30 @@
+﻿---
+// src/pages/blog.astro
+import PageLayout from '~/layouts/PageLayout.astro'
+import Headline from '~/components/blog/Headline.astro'
+import BlogList from '~/components/blog/List.astro'
+import PostTags from '~/components/blog/Tags.astro'
+
+import { sanityClient, urlFor } from '~/lib/sanity'
+import { latestPostsQuery, categoriesQuery } from '~/lib/queries'
+import { mapSanityPostsToTheme } from '~/lib/mapSanityToThemePost'
+
+const sanityPosts = await sanityClient.fetch(latestPostsQuery, { limit: 24 })
+const posts = mapSanityPostsToTheme(sanityPosts, urlFor)
+
+const categories = await sanityClient.fetch(categoriesQuery)
+---
+
+<PageLayout metadata={{ title: 'The Blog', openGraph: { type: 'blog' } }}>
+  <section class="px-6 sm:px-6 py-12 sm:py-16 lg:py-20 mx-auto max-w-4xl">
+    <Headline subtitle="A statically generated blog example with news, tutorials, resources and other interesting content related to AstroWind">
+      The Blog
+    </Headline>
+
+    <BlogList posts={posts} />
+
+    <div class="mt-10">
+      <PostTags tags={categories} class="mb-2" title="Категории:" isCategory />
+    </div>
+  </section>
+</PageLayout>

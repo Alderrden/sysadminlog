@@ -1,0 +1,35 @@
+---
+// src/components/blog/Tags.astro
+// Безопасный вывод тегов/категорий: пропускаем элементы без slug
+import { getPermalink } from '~/utils/permalinks';
+
+export interface Props {
+  tags?: Array<{ title?: string; slug?: string }>;
+  class?: string;
+  title?: string;
+  isCategory?: boolean;
+}
+
+const { tags = [], class: className = '', title = '', isCategory = false } = Astro.props;
+const items = Array.isArray(tags) ? tags.filter((t) => t && typeof t.slug === 'string') : [];
+---
+
+{items.length > 0 && (
+  <div class={className}>
+    {title && <div class="text-sm font-medium text-muted mb-2">{title}</div>}
+    <ul class="flex flex-wrap gap-2">
+      {
+        items.map((tag) => {
+          const href = getPermalink(tag.slug!, isCategory ? 'category' : 'tag');
+          return (
+            <li>
+              <a href={href || '#'} class="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 dark:bg-slate-800 text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition">
+                {tag.title || tag.slug}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+)}

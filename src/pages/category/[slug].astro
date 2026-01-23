@@ -1,0 +1,37 @@
+---
+// src/pages/category/[slug].astro
+import type { GetStaticPaths } from 'astro'
+import PageLayout from '~/layouts/PageLayout.astro'
+import Headline from '~/components/blog/Headline.astro'
+import BlogList from '~/components/blog/List.astro'
+
+import { sanityClient, urlFor } from '~/lib/sanity'
+import { categorySlugsQuery, categoryBySlugQuery, postsByCategoryQuery } from '~/lib/queries'
+import { mapSanityPostsToTheme } from '~/lib/mapSanityToThemePost'
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const slugs: { slug: string }[] = await sanityClient.fetch(categorySlugsQuery)
+  return slugs.map((c) => ({ params: { slug: c.slug } }))
+}
+
+const { slug } = Astro.params
+
+const category = await sanityClient.fetch(categoryBySlugQuery, { slug })
+if (!category) throw new Error('Category not found: ' + slug)
+
+const sanityPosts = await sanityClient.fetch(postsByCategoryQuery, { slug })
+const posts = mapSanityPostsToTheme(sanityPosts, urlFor)
+---
+
+<PageLayout
+  metadata={{
+    title: `Category: ${category.title}`,
+    description: `Posts in category “${category.title}”`,
+    openGraph: { type: 'blog' },
+  }}
+>
+  <section class="px-6 sm:px-6 py-12 sm:py-16 lg:py-20 mx-auto max-w-5xl">
+    <Headline subtitle={`Posts in “${category.title}”`}>Category: {category.title}</Headline>
+    {posts?.length ? <BlogList posts={posts} /> : <p class="text-muted dark:text-slate-400">No posts yet.</p>}
+  </section>
+</PageLayout>
