@@ -2,9 +2,9 @@ name: Deploy Astro to cPanel via FTP
 
 on:
   push:
-    branches: [ main ]         # деплой при пуше в main
-  workflow_dispatch:            # ручной запуск из GitHub Actions
-  repository_dispatch:          # для вебхука из Sanity
+    branches: [ main ]
+  workflow_dispatch:
+  repository_dispatch:
     types: [ sanity-content-change ]
 
 concurrency:
@@ -33,20 +33,51 @@ jobs:
       - name: Build Astro
         run: npm run build
 
-      - name: Verify dist
+      - name: Verify dist content
         run: |
           test -d dist && test "$(ls -A dist)" || (echo "dist is empty" && exit 1)
           du -sh dist || true
 
-      - name: Deploy via FTP
+      # Диагностика сети: проверяем, что порт вообще доступен
+      - name: Preflight — TCP check to FTP server:port
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_PORT:   ${{ secrets.FTP_PORT }}
+        run: |
+          echo "Checking TCP connectivity to $FTP_SERVER:$FTP_PORT ..."
+          timeout 8 bash -c "cat < /dev/null > /dev/tcp/$FTP_SERVER/$FTP_PORT" \
+            && echo "OK: TCP port reachable" || (echo "FAIL: TCP port not reachable" && exit 1)
+
+      # Шаг 1. Чистый FTP (для проверки соединения). Если ок — переходим к FTPS
+      - name: Deploy (probe via plain FTP)
+        id: probe
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server:   ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port:     ${{ secrets.FTP_PORT }}     # напр. 21 или 990 (если FTPS)
-          protocol: ftps                        # можно сменить на ftp, если хост не поддерживает FTPS
-          local-dir: dist/                      # ВАЖНО: содержимое dist
-          server-dir: ${{ secrets.FTP_PATH }}/  # ВАЖНО: docroot с завершающим слэшем
-          dangerous-clean-slate: true           # очистить целевую папку на сервере перед заливкой
-          log-level: standard
+          port:     ${{ secrets.FTP_PORT }}       # обычно 21
+          protocol: ftp                           # ПРОБА: обычный FTP для проверки коннекта
+          local-dir: dist/
+          server-dir: ${{ secrets.FTP_PATH }}/    # важен завершающий слэш
+          dangerous-clean-slate: true
+          timeout: 120000                         # мс
+          log-level: verbose
+
+      # Шаг 2. Если проба через FTP прошла — делаем защищённый деплой через FTPS
+      - name: Deploy via FTPS (explicit on 21)
+        if: steps.probe.outcome == 'success'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:   ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port:     ${{ secrets.FTP_PORT }}       # для explicit FTPS обычно 21
+          protocol: ftps
+          local-dir: dist/
+          server-dir: ${{ secrets.FTP_PATH }}/
+          dangerous-clean-slate: true
+          timeout: 120000
+          log-level: verbose
