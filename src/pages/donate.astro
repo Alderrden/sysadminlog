@@ -1,0 +1,57 @@
+---
+import Layout from "~/layouts/Layout.astro";
+
+const metadata = {
+  title: "Donate",
+  description:
+    "Support SysAdminLog and help keep IT, DevOps and AI articles coming.",
+};
+---
+
+<Layout metadata={metadata}>
+  <section class="mx-auto max-w-4xl px-6 py-16">
+    <h1 class="text-4xl font-bold text-center">
+      Support SysAdminLog
+    </h1>
+
+    <p class="mt-4 text-center text-muted text-lg">
+      If this blog helps you with system administration, DevOps or AI —
+      consider supporting the project.
+    </p>
+
+    <div class="mt-12 rounded-xl border border-gray-700 bg-gray-800 p-8">
+      <h2 class="text-2xl font-semibold">
+        💙 One-Time Donation
+      </h2>
+
+      <p class="mt-3 text-muted">
+        Your donation helps cover hosting costs and allows me to publish
+        more practical guides and tutorials.
+      </p>
+
+      <div class="mt-6">
+        <a
+          href="https://paypal.me/yourname"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center rounded-md bg-primary px-6 py-3 font-semibold text-white hover:opacity-90"
+        >
+          Donate via PayPal
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-12 text-muted">
+      <h3 class="text-xl font-semibold mb-3">
+        Why support this blog?
+      </h3>
+
+      <ul class="list-disc list-inside space-y-2">
+        <li>More real-world sysadmin tutorials</li>
+        <li>Hosting & infrastructure costs</li>
+        <li>No ads, no trackers</li>
+        <li>More open-source content</li>
+      </ul>
+    </div>
+  </section>
+</Layout>
